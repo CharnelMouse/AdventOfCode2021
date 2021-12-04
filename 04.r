@@ -1,4 +1,3 @@
-x <- readLines("04.txt")
 calls <- scan("04.txt", sep = ",", nlines = 1, quiet = TRUE)
 card_els <- scan("04.txt", integer(5), skip = 2, quiet = TRUE)
 cards <- array(card_els, dim = c(5, 5, length(card_els)/25))
