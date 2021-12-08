@@ -1,4 +1,4 @@
-x <- scan("08.txt", rep(list(character()), 15))
+x <- scan("08.txt", rep(list(character()), 15), quiet = TRUE)
 patterns <- do.call(cbind, x[1:10])
 outputs <- do.call(cbind, x[12:15])
 n <- nrow(outputs)
@@ -27,25 +27,48 @@ numbers <- c(
   "ABCDFG"
 )
 
-# just one set for now
-# patterns[1,]
-# outputs[1,]
-# key <- keys[, , 1]
-# both <- c(patterns[1, ], outputs[1, ])
-# needed <- sort(Reduce(union, strsplit(outputs[1,], "", fixed = TRUE)))
-# ones <- strsplit(both[nchar(both) == 2][1], "", fixed = TRUE)[[1]]
-
-# lazy, very slow brute force
-
 perm <- function(x) {
   y <- unname(do.call(expand.grid, c(rep(list(x), length(x)), KEEP.OUT.ATTRS = FALSE)))
   y[apply(y, 1, Negate(anyDuplicated)), ]
 }
 maps <- apply(perm(LETTERS[1:7]), 1, paste, collapse = "")
 
-solve_single <- function(n) {
-  for (i in 1:length(maps)) {
-    dec_both <- chartr("abcdefg", maps[i], c(patterns[n, ], outputs[n, ]))
+string_perms <- function(chars) {
+  unname(apply(perm(chars), 1, paste, collapse = ""))
+}
+one_patterns <- string_perms(c("C", "F"))
+seven_patterns <- string_perms(c("A", "C", "F"))
+four_patterns <- string_perms(c("B", "C", "D", "F"))
+
+filter_maps <- function(maps, strings, char_len, patterns) {
+  match_index <- match(char_len, nchar(strings), 0L)
+  if (!match_index)
+    maps
+  else{
+    given_char_nums <- match(strsplit(strings[match_index], "")[[1]], letters[1:7])
+    chars <- vapply(
+      seq.int(char_len),
+      \(n) substr(maps, given_char_nums[n], given_char_nums[n]),
+      character(length(maps))
+    )
+    strs <- apply( # slow
+      chars,
+      1,
+      paste,
+      collapse = ""
+    )
+    maps[strs %in% patterns]
+  }
+}
+
+solve_single <- function(index) {
+  strings <- c(patterns[index, ], outputs[index, ])
+  local_maps <- maps |>
+    filter_maps(strings, 2L, one_patterns) |>
+    filter_maps(strings, 3L, seven_patterns) |>
+    filter_maps(strings, 4L, four_patterns)
+  for (i in 1:length(local_maps)) {
+    dec_both <- chartr("abcdefg", local_maps[i], strings)
     dec_both_sorted <- strsplit(dec_both, "", fixed = TRUE) |>
       vapply(\(x) paste(sort(x), collapse = ""), character(1))
     matches <- match(dec_both_sorted, numbers)
