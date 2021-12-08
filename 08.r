@@ -29,9 +29,10 @@ numbers <- c(
 
 perm <- function(x) {
   y <- unname(do.call(expand.grid, c(rep(list(x), length(x)), KEEP.OUT.ATTRS = FALSE)))
-  y[apply(y, 1, Negate(anyDuplicated)), ]
+  y[!apply(y, 1, anyDuplicated), , drop = FALSE]
 }
-maps <- apply(perm(LETTERS[1:7]), 1, paste, collapse = "")
+# slow, should be done separately for each line so I can filter first
+maps <- perm(LETTERS[1:7])
 
 string_perms <- function(chars) {
   unname(apply(perm(chars), 1, paste, collapse = ""))
@@ -46,18 +47,14 @@ filter_maps <- function(maps, strings, char_len, patterns) {
     maps
   else{
     given_char_nums <- match(strsplit(strings[match_index], "")[[1]], letters[1:7])
-    chars <- vapply(
-      seq.int(char_len),
-      \(n) substr(maps, given_char_nums[n], given_char_nums[n]),
-      character(length(maps))
-    )
-    strs <- apply( # slow
+    chars <- maps[, c(char_len)]
+    strs <- apply(
       chars,
       1,
       paste,
       collapse = ""
     )
-    maps[strs %in% patterns]
+    maps[strs %in% patterns, ]
   }
 }
 
@@ -67,8 +64,9 @@ solve_single <- function(index) {
     filter_maps(strings, 2L, one_patterns) |>
     filter_maps(strings, 3L, seven_patterns) |>
     filter_maps(strings, 4L, four_patterns)
+  local_map_strings <- apply(local_maps, 1, paste, collapse = "")
   for (i in 1:length(local_maps)) {
-    dec_both <- chartr("abcdefg", local_maps[i], strings)
+    dec_both <- chartr("abcdefg", local_map_strings[i], strings)
     dec_both_sorted <- strsplit(dec_both, "", fixed = TRUE) |>
       vapply(\(x) paste(sort(x), collapse = ""), character(1))
     matches <- match(dec_both_sorted, numbers)
