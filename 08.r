@@ -47,14 +47,14 @@ filter_maps <- function(maps, strings, char_len, patterns) {
     maps
   else{
     given_char_nums <- match(strsplit(strings[match_index], "")[[1]], letters[1:7])
-    chars <- maps[, c(char_len)]
+    chars <- maps[, given_char_nums]
     strs <- apply(
       chars,
       1,
       paste,
       collapse = ""
     )
-    maps[strs %in% patterns, ]
+    maps[strs %in% patterns, , drop = FALSE]
   }
 }
 
@@ -65,13 +65,27 @@ solve_single <- function(index) {
     filter_maps(strings, 3L, seven_patterns) |>
     filter_maps(strings, 4L, four_patterns)
   local_map_strings <- apply(local_maps, 1, paste, collapse = "")
-  for (i in 1:length(local_maps)) {
+  for (i in 1:length(local_map_strings)) {
     dec_both <- chartr("abcdefg", local_map_strings[i], strings)
     dec_both_sorted <- strsplit(dec_both, "", fixed = TRUE) |>
       vapply(\(x) paste(sort(x), collapse = ""), character(1))
     matches <- match(dec_both_sorted, numbers)
     if (!anyNA(matches)) break
   }
+  if (anyNA(matches))
+    stop(paste(
+      "Unresolved line:",
+      toString(strings),
+      "Filtered maps:",
+      toString(local_map_strings),
+      "One:",
+      one_patterns[1],
+      "Seven:",
+      seven_patterns[1],
+      "Four:",
+      four_patterns[1],
+      sep = "\n"
+    ))
   as.integer(sum((matches[11:14] - 1L)*10L^(3:0)))
 }
 solutions <- vapply(seq.int(n), solve_single, integer(1))
