@@ -1,55 +1,62 @@
 x <- scan("12.txt", list(character(), character()), sep = "-", quiet = TRUE)
-connections <- data.frame(from = c(x[[1]], x[[2]]), to = c(x[[2]], x[[1]]))
 
-paths <- function(location, connections) {
-  if (location == "end")
-    return(1L)
-  destinations <- connections$to[connections$from == location]
-  if (length(destinations) == 0L)
-    return(0L)
-  new_connections <- if (location == tolower(location))
-    connections[connections$from != location & connections$to != location, , drop = FALSE]
-  else
-    connections
-  sum(vapply(destinations, paths, integer(1), new_connections))
-}
-paths("start", connections) # part one: 3708
-
-locations <- unique(connections$from)
+locations <- unique(c(x[[1]], x[[2]]))
 small_location_indices <- which(
   !is.element(locations, c("start", "end")) &
     locations == tolower(locations)
 )
-visits_left <- ifelse(locations == tolower(locations), 2, Inf)
-visits_left[match(c("start", "end"), locations)] <- 1
-remove_finished <- function(connections, visits_left) {
-  finished_locations <- locations[visits_left <= 0]
-  connections[
-    !is.element(connections$from, finished_locations) &
-      !is.element(connections$to, finished_locations),
-    ,
-    drop = FALSE
-  ]
+connections <- matrix(
+  FALSE,
+  nrow = length(locations),
+  ncol = length(locations),
+  dimnames = list(locations, locations)
+)
+for (n in seq_along(x[[1]])) {
+  connections[x[[1]][n], x[[2]][n]] <- TRUE
+  connections[x[[2]][n], x[[1]][n]] <- TRUE
 }
-paths2 <- function(location, connections, visits_left, visit2) {
-  if (location == "end")
+
+start_index <- match("start", locations)
+end_index <- match("end", locations)
+paths <- function(location, connections) {
+  if (location == end_index)
     return(1L)
-  location_index <- match(location, locations)
+  destinations <- which(connections[location, ])
+  if (length(destinations) == 0L)
+    return(0L)
+  if (location %in% c(start_index, small_location_indices)) {
+    connections[location, ] <- FALSE
+    connections[, location] <- FALSE
+  }
+  sum(vapply(destinations, paths, integer(1), connections))
+}
+paths(start_index, connections) # part one: 3708
+
+visits_left <- ifelse(locations == tolower(locations), 2, Inf)
+visits_left[c(start_index, end_index)] <- 1
+paths2 <- function(location, connections, visits_left, visit2) {
+  if (location == end_index)
+    return(1L)
   if (
-    location != "start" &&
-    location == tolower(location) &&
-    visits_left[location_index] == 1 &&
+    location %in% small_location_indices &&
+    visits_left[location] == 1 &&
     !visit2
   ) {
-    other_small <- setdiff(small_location_indices, location_index)
+    other_small <- setdiff(small_location_indices, location)
     visits_left[other_small] <- visits_left[other_small] - 1
     visit2 <- TRUE
   }
-  connections <- remove_finished(connections, visits_left)
-  destinations <- connections$to[connections$from == location]
+  finished_locations <- visits_left <= 0
+  connections[finished_locations, ] <- FALSE
+  connections[, finished_locations] <- FALSE
+  destinations <- which(connections[location, ])
   if (length(destinations) == 0L)
     return(0L)
-  visits_left[location_index] <- visits_left[location_index] - 1
-  sum(vapply(destinations, paths2, integer(1), connections, visits_left, visit2))
+  visits_left[location] <- visits_left[location] - 1
+  s <- 0L
+  for (n in destinations) {
+    s <- s + paths2(n, connections, visits_left, visit2)
+  }
+  s
 }
-paths2("start", connections, visits_left, FALSE) # part two: 93858
+paths2(start_index, connections, visits_left, FALSE) # part two: 93858
