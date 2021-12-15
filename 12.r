@@ -1,3 +1,20 @@
+# Speed notes
+# I think the main cause of slowness here is using
+# recursion for paths/paths2, so first priority
+# would be converting to an iterative version.
+# Secondly, I think I can remove the big caves
+# before I start, e.g. if we have
+# a -> A
+# A -> a
+# A -> b
+# then we'd replace this with
+# a -> a
+# a -> b
+# This removes the need to check the cave type
+# before changing the remaining number of visits.
+# We could also remove a -> a transitions for part
+# one, since we know in advance they can't be used.
+
 x <- scan("12.txt", list(character(), character()), sep = "-", quiet = TRUE)
 
 locations <- unique(c(x[[1]], x[[2]]))
