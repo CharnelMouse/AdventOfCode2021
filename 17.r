@@ -15,9 +15,6 @@ range_y <- as.integer(
 # given initial speed v on y-axis, position at
 # time t is vt - t(t-1)/2. So we need t such that
 # ymin <= vt - t(t-1)/2 <= ymax, i.e.
-# t(t - (2v+1)) + 2ymin <= 0,
-# t(t - (2v+1)) + 2ymax <= 0.
-# or
 # (t - (v+1/2))^2 <= (v+1/2)^2 - 2ymin,
 # (t - (v+1/2))^2 >= (v+1/2)^2 - 2ymax.
 # If ymax <= 0, every term is positive, so we require
@@ -25,13 +22,18 @@ range_y <- as.integer(
 # to contain an integer.
 # If z is contained, then (z+1/2)^2 is in
 # [(v+1/2)^2 - 2ymax, (v+1/2)^2 - 2ymin], so
-# (z+v)(z-v) is in [2(-ymax), 2(-ymin)].
-# Let z = v+y, then (2v+y)y is in [2(-ymax), 2(-ymin)].
-# So v must at least satisfy 2v+1 <= 2(-ymin), or
+# (z+v+1)(z-v) is in [2(-ymax), 2(-ymin)].
+# Let z = v+y, then (2v+y+1)y is in [2(-ymax), 2(-ymin)].
+# So v must at least satisfy 2v+2 <= 2(-ymin), i.e.
 # v <= (-ymin)-1. So we can count down from there.
+# v = (-ymin)-1 satisifies the equality, so is always a solution:
+# the probe goes up, returns to 0 height, then moves v+1 down.
 # Count down to ymin, to get all possible velocities for part two.
 
-vely <- -range_y[1] - 1
+max_vely <- -range_y[1] - 1L
+max_vely*(max_vely + 1L)/2 # part one: 6441
+
+vely <- max_vely
 maybevalidy <- integer()
 maxtimesy <- integer()
 mintimesy <- integer()
@@ -55,19 +57,18 @@ while (vely >= range_y[1]) {
 # Velocity at time t, given starting velocity v, is
 # (v - t)[t <= v], so position is
 # (vs - s(s-1)/2), where s = min(t, v).
+# Minimum velocity just reaches xmin, so
+# v(v+1)/2 >= xmin => v >= -1/2 + 1/2 sqrt(8xmin + 1).
 
+minvx <- ceiling(-1/2 + sqrt(8*range_x[1] + 1L)/2)
 validy <- integer()
-validx <- integer()
+nvalid <- 0L
 
 for (n in seq_along(maybevalidy)) {
-  for (vx in 1:range_x[2]) {
+  for (vx in minvx:range_x[2]) {
     s <- min(mintimesy[n], vx):min(maxtimesy[n], vx)
     posx <- s*(vx - (s - 1)/2)
-    if (any(posx >= range_x[1] & posx <= range_x[2])) {
-      validx <- c(validx, vx)
-      validy <- c(validy, maybevalidy[n])
-    }
+    nvalid <- nvalid + any(posx >= range_x[1] & posx <= range_x[2])
   }
 }
-validy[1]*(validy[1] + 1)/2 # part one: 6441
-length(validy) # part two: 3186
+nvalid # part two: 3186
