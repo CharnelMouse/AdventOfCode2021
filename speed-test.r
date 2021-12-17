@@ -12,6 +12,7 @@ times <- microbenchmark::microbenchmark(
   source("13.r"),
   source("14.r"),
   source("16.r"),
+  source("17.r"),
   setup = expression(rm(list = ls()))
 )
 
