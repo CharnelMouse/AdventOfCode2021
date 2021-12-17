@@ -1,5 +1,5 @@
 x <- readLines("14.txt")
-init <- strsplit(x[1], "")[[1]]
+init <- strsplit(x[1], "", fixed = TRUE)[[1]]
 productions <- x[-(1:2)]
 predecessors <- substr(productions, 1, 2)
 insertions <- substr(productions, 7, 7)

@@ -1,5 +1,5 @@
 x <- readLines("09.txt") |>
-  strsplit("") |>
+  strsplit("", fixed = TRUE) |>
   lapply(as.integer) |>
   do.call(what = rbind)
 

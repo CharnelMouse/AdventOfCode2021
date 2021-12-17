@@ -47,6 +47,6 @@ simp[is.na(illegal_points)] |>
   gsub(pattern = "[", replacement = "2", fixed = TRUE) |>
   gsub(pattern = "{", replacement = "3", fixed = TRUE) |>
   gsub(pattern = "<", replacement = "4", fixed = TRUE) |>
-  strsplit("") |>
+  strsplit("", fixed = TRUE) |>
   vapply(\(x) sum(as.integer(x)*5^(0:(length(x) - 1L))), numeric(1)) |>
   median.default() # part two: 2182912364

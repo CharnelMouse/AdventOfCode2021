@@ -1,7 +1,7 @@
 x <- readLines("16.txt")
 
 to_bin <- function(str) {
-  hex_digits <- strsplit(str, "")[[1]]
+  hex_digits <- strsplit(str, "", fixed = TRUE)[[1]]
   sapply(
     hex_digits,
     function(char) {

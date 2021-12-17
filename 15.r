@@ -7,7 +7,10 @@
 # of removing their old priorities on update, I'd just
 # need to check the top element is unvisited when popped.
 
-x <- do.call(rbind, lapply(strsplit(readLines("15.txt"), ""), as.integer))
+x <- do.call(
+  rbind,
+  lapply(strsplit(readLines("15.txt"), "", fixed = TRUE), as.integer)
+)
 r <- nrow(x)
 c <- ncol(x)
 n <- r*c

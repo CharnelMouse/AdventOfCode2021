@@ -46,7 +46,10 @@ filter_maps <- function(maps, strings, char_len, patterns) {
   if (!match_index)
     maps
   else{
-    given_char_nums <- match(strsplit(strings[match_index], "")[[1]], letters[1:7])
+    given_char_nums <- match(
+      strsplit(strings[match_index], "", fixed = TRUE)[[1]],
+      letters[1:7]
+    )
     chars <- maps[, given_char_nums]
     strs <- apply(
       chars,

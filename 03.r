@@ -1,5 +1,5 @@
 x <- readLines("03.txt")
-bitmat <- strsplit(x, "") |>
+bitmat <- strsplit(x, "", fixed = TRUE) |>
   lapply(strtoi) |>
   do.call(what = rbind)
 n <- nrow(bitmat)
