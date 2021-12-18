@@ -1,3 +1,10 @@
+# Adding two reduced numbers can't result
+# in a single number being at depth 5+,
+# so we can ignore the "pair" part of the
+# explode condition.
+# This lets us store numbers as flat vectors
+# of the values and depths.
+
 x <- strsplit(readLines("18.txt"), "", fixed = TRUE)
 
 parse_number <- function(chars) {
@@ -25,28 +32,29 @@ reduce_once <- function(number) {
   first_deep <- match(TRUE, number$depths >= 5L)
   if (!is.na(first_deep)) {
     # explode
-    new_number <- number
-    new_number$values[first_deep - 1L] <- new_number$values[first_deep - 1L] +
-      new_number$values[first_deep]
-    if (first_deep + 1L < length(new_number$values)) {
-      new_number$values[first_deep + 2L] <- new_number$values[first_deep + 2L] +
-        new_number$values[first_deep + 1L]
+    new_values <- number$values
+    new_values[first_deep - 1L] <- new_values[first_deep - 1L] +
+      new_values[first_deep]
+    if (first_deep + 1L < length(new_values)) {
+      new_values[first_deep + 2L] <- new_values[first_deep + 2L] +
+        new_values[first_deep + 1L]
     }
-    new_number$values <- c(
-      new_number$values[0:(first_deep - 1L)],
+    new_values <- c(
+      new_values[0:(first_deep - 1L)],
       0L,
-      new_number$values[-seq.int(first_deep + 1L)]
+      new_values[-seq.int(first_deep + 1L)]
     )
-    new_number$depths <- c(
-      new_number$depths[0:(first_deep - 1L)],
-      new_number$depths[first_deep] - 1L,
-      new_number$depths[-seq.int(first_deep + 1L)]
+    new_depths <- c(
+      number$depths[0:(first_deep - 1L)],
+      number$depths[first_deep] - 1L,
+      number$depths[-seq.int(first_deep + 1L)]
     )
+    list(values = new_values, depths = new_depths)
   }else{
     first_big <- match(TRUE, number$values >= 10L)
     if (!is.na(first_big)) {
       # split
-      new_number <- list(
+      list(
         values = c(
           number$values[0:(first_big - 1L)],
           floor(number$values[first_big]/2),
@@ -59,13 +67,10 @@ reduce_once <- function(number) {
           number$depths[-seq.int(first_big)]
         )
       )
-      if (length(new_number$values) != length(new_number$depths))
-        stop(paste("error in split", print(number), print(first_big), print(new_number)))
     }else{
-      new_number <- number
+      number
     }
   }
-  new_number
 }
 
 reduce_number <- function(number) {
@@ -85,32 +90,27 @@ add_numbers <- function(n1, n2) {
   reduce_number(pre_reduced)
 }
 
-magnitude_once <- function(number) {
-  len <- length(number$values)
-  index <- 1L
-  new_number <- list(values = integer(), depths = integer())
-  flag <- FALSE
-  while (index <= len) {
-    if (index < len && number$depths[index + 1L] == number$depths[index] && !flag) {
-      new_number$values <- c(
-        new_number$values,
-        3L*number$values[index] + 2L*number$values[index + 1L]
-      )
-      new_number$depths <- c(new_number$depths, number$depths[index] - 1L)
-      flag <- TRUE
-      index <- index + 2L
-    }else{
-      new_number$values <- c(new_number$values, number$values[index])
-      new_number$depths <- c(new_number$depths, number$depths[index])
-      index <- index + 1L
-    }
-  }
-  new_number
-}
-
 magnitude <- function(number) {
-  while (length(number$values) > 1)
-    number <- magnitude_once(number)
+  len <- length(number$values)
+  while (len > 1) {
+    first_pair <- match(
+      TRUE,
+      number$depths[-len] == number$depths[-1]
+    )
+    number <- list(
+      values = c(
+        number$values[0:(first_pair - 1L)],
+        3L*number$values[first_pair] + 2L*number$values[first_pair + 1L],
+        number$values[-seq.int(first_pair + 1L)]
+      ),
+      depths = c(
+        number$depths[0:(first_pair - 1L)],
+        number$depths[first_pair] - 1L,
+        number$depths[-seq.int(first_pair + 1L)]
+      )
+    )
+    len <- len - 1L
+  }
   number$values
 }
 
