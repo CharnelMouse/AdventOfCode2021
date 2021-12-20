@@ -19,69 +19,71 @@ hits <- split(
 )
 
 match_scanners <- function(lst1, lst2) {
-  n1 <- length(lst1)
-  n2 <- length(lst2)
-  # We shouldn't be checking all the transforms in isolation.
-  # We should be checking 1, -1, 2, -2, 3, and -3 for matches
-  # and using those to determine the transformation.
-  transforms <- list(
-    \(x) c( x[1],  x[2],  x[3]),
-    \(x) c(-x[1], -x[2],  x[3]),
-    \(x) c( x[1], -x[2], -x[3]),
-    \(x) c(-x[1],  x[2], -x[3]),
-    \(x) c(-x[1],  x[3],  x[2]),
-    \(x) c( x[1], -x[3],  x[2]),
-    \(x) c( x[1],  x[3], -x[2]),
-    \(x) c(-x[1], -x[3], -x[2]),
-    \(x) c(-x[2],  x[1],  x[3]),
-    \(x) c( x[2], -x[1],  x[3]),
-    \(x) c( x[2],  x[1], -x[3]),
-    \(x) c(-x[2], -x[1], -x[3]),
-    \(x) c( x[2],  x[3],  x[1]),
-    \(x) c(-x[2], -x[3],  x[1]),
-    \(x) c( x[2], -x[3], -x[1]),
-    \(x) c(-x[2],  x[3], -x[1]),
-    \(x) c( x[3],  x[1],  x[2]),
-    \(x) c(-x[3], -x[1],  x[2]),
-    \(x) c( x[3], -x[1], -x[2]),
-    \(x) c(-x[3],  x[1], -x[2]),
-    \(x) c(-x[3],  x[2],  x[1]),
-    \(x) c( x[3], -x[2],  x[1]),
-    \(x) c( x[3],  x[2], -x[1]),
-    \(x) c(-x[3], -x[2], -x[1])
+  # each of three axes can become x, -x, y, -y, z, or -z
+  # in some transformation, so we check each of the 3x6
+  # pairs to avoid redundancy from checking all transformations.
+  points1 <- do.call(rbind, lst1)
+  points2 <- do.call(rbind, lst2)
+  axes2 <- cbind(points2, -points2)
+  element_differences <- array(
+    NA_integer_,
+    dim = c(nrow(points1), nrow(points2), 3L, 6L)
   )
-  for (tr in transforms) {
-    lst3 <- lapply(lst2, tr)
-    diffs <- list()
-    for (i1 in seq.int(n1)) {
-      for (i2 in seq.int(n2)) {
-        diffs <- c(diffs, list(lst3[[i2]] - lst1[[i1]]))
-      }
-    }
-    diffs <- unique(diffs)
-    for (df in diffs) {
-      shifted2 <- lapply(lst3, `-`, df)
-      intersection <- intersect(lst1, shifted2)
-      if (length(intersection) >= 12)
-        return(list(shifted2, df))
+  for (axis_label1 in 1:3) {
+    for (axis_label2 in 1:6) {
+      element_differences[, , axis_label1, axis_label2] <-
+        outer(points1[, axis_label1], axes2[, axis_label2], `-`)
     }
   }
-  NULL
+  max_axis_matches <- apply(
+    element_differences,
+    3:4,
+    \(x) {
+      fac <- factor(x)
+      freqs <- tabulate(fac)
+      nm <- levels(fac)[freqs >= 12]
+      n <- length(nm)
+      stopifnot(n <= 1)
+      if (n == 0)
+        NA_integer_
+      else
+        as.integer(nm)
+    }
+  )
+  # Only ever three valid axis pairings, so no
+  # complex choice-making for which transformation to use.
+  # (Input-specific?)
+  stopifnot(sum(!is.na(max_axis_matches)) <= 3)
+  if (
+    all(apply(max_axis_matches, 1, \(x) any(!is.na(x)))) &&
+    (any(!is.na(max_axis_matches[, 1])) || any(!is.na(max_axis_matches[, 4]))) &&
+    (any(!is.na(max_axis_matches[, 2])) || any(!is.na(max_axis_matches[, 5]))) &&
+    (any(!is.na(max_axis_matches[, 3])) || any(!is.na(max_axis_matches[, 6])))
+  ) {
+    indices <- apply(max_axis_matches, 1, \(x) which(!is.na(x)))
+    diffs <- apply(max_axis_matches, 1, na.omit)
+    new_points2 <- cbind(
+      axes2[, indices[1]] + diffs[1],
+      axes2[, indices[2]] + diffs[2],
+      axes2[, indices[3]] + diffs[3]
+    )
+    list(
+      apply(new_points2, 1, identity, simplify = FALSE),
+      diffs
+    )
+  }
+  else
+    NULL
 }
 
-matched_scanners <- 1L
 unmatched_scanners <- seq.int(n_scanners)[-1]
 matched_hits <- hits[1]
-n_matched <- 1L
 n_unmatched <- length(unmatched_scanners)
 new_matched_scanners <- 1L
-n_non_new <- 0L
 current <- 2L
 scanner_positions <- list(c(0L, 0L, 0L))
 
-# Very long! c. half an hour
 while (n_unmatched > 0) {
-  cat("looping...\n")
   next_matched_scanners <- integer()
   for (scanner in unmatched_scanners) {
     flag <- TRUE
@@ -93,11 +95,9 @@ while (n_unmatched > 0) {
           matched_hits <- c(matched_hits, list(mch[[1]]))
           scanner_positions <- c(scanner_positions, list(mch[[2]]))
           n_unmatched <- n_unmatched - 1L
-          matched_scanners <- c(matched_scanners, scanner)
           next_matched_scanners <- c(next_matched_scanners, current)
           current <- current + 1L
           flag <- FALSE
-          cat(n_unmatched, "\n")
         }
       }
     }
