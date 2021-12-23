@@ -181,11 +181,14 @@ solve <- function(x, progress = FALSE) {
   nxt_sides <- move_list$side[[nxt]]
   nxt_cost <- move_list$cost[nxt]
   nxt_corridor <- move_list$corridor[[nxt]]
+  nxt_hash <- move_list$hash[nxt]
   nxt_tot <- tots[nxt]
+  final_hash <- corridor_hash(rep(NA, corridor_length), corridor_length) + 1i *
+    sides_hash(matrix(rep(labels, side_length), nrow = n_sides), n_sides, side_length)
 
   while (!identical(
-    side_filled(nxt_sides, n_sides, side_length),
-    rep(side_length, n_sides)
+    nxt_hash,
+    final_hash
   )) {
     if (progress) cat("\r", nxt_tot)
     new_move_list <- moves(
@@ -236,6 +239,7 @@ solve <- function(x, progress = FALSE) {
     nxt_sides <- move_list$side[[nxt]]
     nxt_cost <- move_list$cost[nxt]
     nxt_corridor <- move_list$corridor[[nxt]]
+    nxt_hash <- move_list$hash[nxt]
     nxt_tot <- tots[nxt]
   }
   nxt_cost
