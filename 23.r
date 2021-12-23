@@ -95,39 +95,41 @@ moves <- function(
       move_costs <- c(move_costs, cost)
     }
   }
-  for (s in seq.int(n_sides)) {
-    if (
-      filled[s] < side_length && # side room not completed
-      sum(!is.na(sides[s, ])) > filled[s] # aliens present
-    ) {
-      alien_pos <- min(match(labels, sides[s, ]), na.rm = TRUE)
-      alien_label <- sides[s, alien_pos]
-      left_corridor <- corridor[side_positions[s]:1][-1]
-      first_left_blocked <- side_positions[s] -
-        min(match(labels, left_corridor, nomatch = length(left_corridor) + 1L))
-      right_corridor <- corridor[side_positions[s]:corridor_length][-1]
-      first_right_blocked <- side_positions[s] +
-        min(match(labels, right_corridor, nomatch = length(right_corridor) + 1L))
-      if (first_right_blocked - first_left_blocked > 2L) { # spaces available
-        available <- setdiff(
-          (first_left_blocked + 1L):(first_right_blocked - 1L),
-          side_positions # can't stop outside side rooms
-        )
-        for (target in available) {
-          move_corridors <- c(
-            move_corridors,
-            list(`[<-`(corridor, target, alien_label))
+  if (length(move_costs) == 0) { # if any side room fills, just use those
+    for (s in seq.int(n_sides)) {
+      if (
+        filled[s] < side_length && # side room not completed
+        sum(!is.na(sides[s, ])) > filled[s] # aliens present
+      ) {
+        alien_pos <- min(match(labels, sides[s, ]), na.rm = TRUE)
+        alien_label <- sides[s, alien_pos]
+        left_corridor <- corridor[side_positions[s]:1][-1]
+        first_left_blocked <- side_positions[s] -
+          min(match(labels, left_corridor, nomatch = length(left_corridor) + 1L))
+        right_corridor <- corridor[side_positions[s]:corridor_length][-1]
+        first_right_blocked <- side_positions[s] +
+          min(match(labels, right_corridor, nomatch = length(right_corridor) + 1L))
+        if (first_right_blocked - first_left_blocked > 2L) { # spaces available
+          available <- setdiff(
+            (first_left_blocked + 1L):(first_right_blocked - 1L),
+            side_positions # can't stop outside side rooms
           )
-          move_sides <- c(
-            move_sides,
-            list(`[<-`(sides, s, alien_pos, NA_character_))
-          )
-          distance <- alien_pos + abs(target - side_positions[s])
-          cost <- cell_costs[match(alien_label, labels)] * distance
-          move_costs <- c(
-            move_costs,
-            cost
-          )
+          for (target in available) {
+            move_corridors <- c(
+              move_corridors,
+              list(`[<-`(corridor, target, alien_label))
+            )
+            move_sides <- c(
+              move_sides,
+              list(`[<-`(sides, s, alien_pos, NA_character_))
+            )
+            distance <- alien_pos + abs(target - side_positions[s])
+            cost <- cell_costs[match(alien_label, labels)] * distance
+            move_costs <- c(
+              move_costs,
+              cost
+            )
+          }
         }
       }
     }
@@ -205,6 +207,7 @@ solve <- function(x, progress = FALSE) {
       side_positions
     )
     rem <- integer()
+    # could replace this with is.element calls if using a single (complex?) hash
     for (n in seq_along(new_move_list$ch)) {
       ch_matches <- cache$corridor == new_move_list$ch[n] # main current time sink
       if (any(cache$side[ch_matches] == new_move_list$sh[n])) {
