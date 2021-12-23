@@ -134,12 +134,13 @@ moves <- function(
       }
     }
   }
+  ch <- as.complex(sapply(move_corridors, corridor_hash, corridor_length))
+  sh <- as.complex(sapply(move_sides, sides_hash, n_sides, side_length))
   list(
     corridor = move_corridors,
     side = move_sides,
     cost = move_costs,
-    ch = sapply(move_corridors, corridor_hash, corridor_length),
-    sh = sapply(move_sides, sides_hash, n_sides, side_length)
+    hash = ch + sh*1i
   )
 }
 
@@ -153,10 +154,8 @@ solve <- function(x, progress = FALSE) {
     vapply(\(chars) chars[side_positions + 1L], character(n_sides))
   corridor_starts <- rep(NA_character_, corridor_length)
 
-  cache <- list(
-    corridor = corridor_hash(corridor_starts, corridor_length),
-    side = sides_hash(side_starts, n_sides, side_length)
-  )
+  cache <- corridor_hash(corridor_starts, corridor_length) +
+    sides_hash(side_starts, n_sides, side_length)*1i
   move_list <- moves(
     corridor_starts,
     side_starts,
@@ -165,16 +164,7 @@ solve <- function(x, progress = FALSE) {
     side_length,
     side_positions
   )
-  cache$corridor <- c(cache$corridor, move_list$ch)
-  cache$side <- c(cache$side, move_list$sh)
-  move_list$ch <- lapply(
-    move_list$ch,
-    \(h) c(corridor_hash(corridor_starts, corridor_length), h)
-    )
-  move_list$sh <- lapply(
-    move_list$sh,
-    \(h) c(sides_hash(side_starts, n_sides, side_length), h)
-  )
+  cache <- c(cache, move_list$hash)
   tots <- move_list$cost +
     mapply(
       heuristic,
@@ -206,30 +196,20 @@ solve <- function(x, progress = FALSE) {
       side_length,
       side_positions
     )
-    rem <- integer()
-    # could replace this with is.element calls if using a single (complex?) hash
-    for (n in seq_along(new_move_list$ch)) {
-      ch_matches <- cache$corridor == new_move_list$ch[n] # main current time sink
-      if (any(cache$side[ch_matches] == new_move_list$sh[n])) {
-        rem <- c(rem, n)
-      }
-    }
+    rem <- which(is.element(new_move_list$hash, cache))
     if (length(rem) > 0) {
       new_move_list$corridor <- new_move_list$corridor[-rem]
       new_move_list$side <- new_move_list$side[-rem]
       new_move_list$cost <- new_move_list$cost[-rem]
-      new_move_list$ch <- new_move_list$ch[-rem]
-      new_move_list$sh <- new_move_list$sh[-rem]
+      new_move_list$hash <- new_move_list$hash[-rem]
     }
-    cache$corridor <- c(cache$corridor, new_move_list$ch)
-    cache$side <- c(cache$side, new_move_list$sh)
     if (length(new_move_list$cost) > 0) {
+      cache <- c(cache, new_move_list$hash)
       new_move_list$cost <- new_move_list$cost + nxt_cost
       move_list$corridor <- c(move_list$corridor[-nxt], new_move_list$corridor)
       move_list$side <- c(move_list$side[-nxt], new_move_list$side)
       move_list$cost <- c(move_list$cost[-nxt], new_move_list$cost)
-      move_list$ch <- c(move_list$ch[-nxt], new_move_list$ch)
-      move_list$sh <- c(move_list$sh[-nxt], new_move_list$sh)
+      move_list$hash <- c(move_list$hash[-nxt], new_move_list$hash)
       tots <- c(
         tots[-nxt],
         new_move_list$cost +
@@ -249,8 +229,7 @@ solve <- function(x, progress = FALSE) {
       move_list$corridor <- move_list$corridor[-nxt]
       move_list$side <- move_list$side[-nxt]
       move_list$cost <- move_list$cost[-nxt]
-      move_list$ch <- move_list$ch[-nxt]
-      move_list$sh <- move_list$sh[-nxt]
+      move_list$hash <- move_list$hash[-nxt]
       tots <- tots[-nxt]
     }
     nxt <- which.min(tots)
