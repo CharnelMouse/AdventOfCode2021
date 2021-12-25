@@ -78,7 +78,6 @@ a_prods <- c(rev(cumprod(rev(a)))[-1], 1)
 z <- 0
 
 for (chunk in 1:n_chunks) {
-  cat("\r", chunk, " ", length(z), "     ")
   # (z/a)*(25[z mod 26 + b != i] + 1) + [z mod 26 + b != i](i + c)
   z <- setNames(
     rep(z, each = 9),
